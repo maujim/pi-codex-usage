@@ -111,6 +111,11 @@ function formatResetCountdown(seconds: number | null): string | null {
 	return `${secs}s`;
 }
 
+function isCodexProvider(model: { provider?: unknown } | undefined): boolean {
+	if (!model) return false;
+	return model.provider === "openai-codex";
+}
+
 function isSparkModel(modelId: string | undefined): boolean {
 	return modelId === SPARK_MODEL_ID;
 }
@@ -387,6 +392,10 @@ function createStatusRefresher() {
 
 	async function updateFooterStatus(ctx: ExtensionContext, modelId = ctx.model?.id): Promise<void> {
 		if (!ctx.hasUI) return;
+		if (!isCodexProvider(ctx.model)) {
+			ctx.ui.setStatus(EXTENSION_ID, undefined);
+			return;
+		}
 		if (isRefreshInFlight) {
 			queuedRefresh = { ctx, modelId };
 			return;
@@ -440,6 +449,10 @@ function createStatusRefresher() {
 
 	async function setLoadingStatus(ctx: ExtensionContext): Promise<void> {
 		if (!ctx.hasUI) return;
+		if (!isCodexProvider(ctx.model)) {
+			ctx.ui.setStatus(EXTENSION_ID, undefined);
+			return;
+		}
 
 		try {
 			await loadAuthCredentials();
@@ -471,7 +484,12 @@ function createStatusRefresher() {
 	}
 
 	function renderFromLastSnapshot(ctx: ExtensionContext): boolean {
-		if (!ctx.hasUI || !lastUsageSnapshot) return false;
+		if (!ctx.hasUI) return false;
+		if (!isCodexProvider(ctx.model)) {
+			ctx.ui.setStatus(EXTENSION_ID, undefined);
+			return true;
+		}
+		if (!lastUsageSnapshot) return false;
 		ctx.ui.setStatus(EXTENSION_ID, formatStatus(ctx, lastUsageSnapshot, percentDisplayMode, resetWindowMode, ctx.model?.id));
 		return true;
 	}
